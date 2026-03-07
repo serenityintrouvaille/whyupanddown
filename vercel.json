@@ -1,0 +1,17 @@
+{
+  "name": "javis1",
+  "version": 2,
+  "env": {
+    "GOOGLE_NEWS_API_KEY": "@google_news_api_key",
+    "ANTHROPIC_API_KEY": "@anthropic_api_key"
+  },
+  "functions": {
+    "pages/api/**": {
+      "maxDuration": 60
+    }
+  },
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}
