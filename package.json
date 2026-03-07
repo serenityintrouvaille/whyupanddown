@@ -1,7 +1,7 @@
 {
-  "name": "javis1",
-  "version": "1.0.0",
-  "description": "AI 금융비서 - 각 섹터가 왜 올랐는지 요약해주는 서비스",
+  "name": "whyupanddown",
+  "version": "2.0.0",
+  "description": "그날의 수혜주가 왜 올랐는지를 요약해주는 AI 금융 비서",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
