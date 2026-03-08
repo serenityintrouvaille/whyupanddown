@@ -1,5 +1,5 @@
 {
-  "name": "javis1",
+  "name": "whyupanddown",
   "version": 2,
   "env": {
     "GOOGLE_NEWS_API_KEY": "@google_news_api_key",
@@ -8,8 +8,17 @@
   "functions": {
     "pages/api/**": {
       "maxDuration": 60
+    },
+    "pages/api/update.ts": {
+      "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/update",
+      "schedule": "0 7 * * *"
+    }
+  ],
   "buildCommand": "next build",
   "outputDirectory": ".next",
   "installCommand": "npm install",

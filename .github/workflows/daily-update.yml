@@ -1,0 +1,48 @@
+name: Daily Update (4:00 PM KST)
+
+on:
+  schedule:
+    # 4:00 PM KST = 7:00 AM UTC
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Run Daily Update
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_NEWS_API_KEY: ${{ secrets.GOOGLE_NEWS_API_KEY }}
+          VERCEL_URL: ${{ secrets.VERCEL_URL }}
+        run: |
+          # Call Vercel API endpoint directly
+          curl -X POST https://${{ secrets.VERCEL_DOMAIN }}/api/update \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.VERCEL_API_TOKEN }}" \
+            -d '{"trigger": "scheduled"}'
+
+      - name: Success Notification
+        if: success()
+        run: echo "✅ Daily update completed at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+      - name: Failure Notification
+        if: failure()
+        run: echo "❌ Daily update failed - check logs"

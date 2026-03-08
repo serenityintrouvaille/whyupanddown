@@ -3,6 +3,9 @@ import {
   fetchMarketIndicators,
   getOilImpactAnalysis,
   getExchangeRateImpactAnalysis,
+  getGoldImpactAnalysis,
+  getKospiContext,
+  getVolatilityContext,
   MarketIndicators
 } from '@/lib/market-indicators';
 

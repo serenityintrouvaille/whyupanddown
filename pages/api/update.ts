@@ -17,12 +17,24 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
-  if (req.method !== 'POST') {
+  // GET 요청도 지원 (Vercel Cron Job이 GET으로 호출)
+  if (req.method !== 'POST' && req.method !== 'GET') {
     return res.status(405).json({ success: false, timestamp: new Date().toISOString(), error: 'Method not allowed' });
   }
 
+  // 환경 변수 필수 검증
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('[FATAL] ANTHROPIC_API_KEY not configured');
+    return res.status(500).json({
+      success: false,
+      timestamp: new Date().toISOString(),
+      error: 'Server misconfiguration: ANTHROPIC_API_KEY required'
+    });
+  }
+
   try {
-    console.log('[UPDATE] 시작:', new Date().toLocaleString('ko-KR'));
+    const kstTime = new Date(new Date().getTime() + 9 * 60 * 60 * 1000).toLocaleString('ko-KR');
+    console.log('[UPDATE] 시작:', kstTime);
 
     // 1. 테마 크롤링
     console.log('[1/3] 네이버 테마 크롤링...');

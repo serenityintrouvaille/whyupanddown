@@ -23,6 +23,15 @@ export default async function handler(
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
+  // 환경 변수 검증
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('[ENV ERROR] ANTHROPIC_API_KEY is not set');
+    return res.status(500).json({
+      success: false,
+      error: 'API configuration error: ANTHROPIC_API_KEY is required'
+    });
+  }
+
   try {
     const { sector } = req.body;
 

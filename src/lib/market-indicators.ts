@@ -157,3 +157,24 @@ export function getExchangeRateImpactAnalysis(exchangeChange: number): string {
     return '원화 강세로 수출주 약세, 외국인 매수 주목';
   }
 }
+
+export function getGoldImpactAnalysis(change: number): string {
+  if (change > 1) return '금값 급등, 안전자산 선호 강화 → 금융주 약세';
+  if (change > 0.3) return '금값 상승, 인플레이션 우려 증가';
+  if (change > -0.3) return '금값 안정적, 경제 신호 중립적';
+  return '금값 하락, 리스크 선호 심화 → 성장주 강세';
+}
+
+export function getKospiContext(change: number): string {
+  if (change > 1) return '코스피 강세, 시장 심리 긍정적';
+  if (change > 0) return '코스피 소폭 상승, 기업 실적 개선 신호';
+  if (change > -0.5) return '코스피 약세, 경기 둔화 우려';
+  return '코스피 급락, 위험자산 회피 심화';
+}
+
+export function getVolatilityContext(vix: number, korvix: number): string {
+  if (vix > 25 || korvix > 30) return '변동성 극도로 높음, 시장 불안정 심화';
+  if (vix > 20 || korvix > 25) return '변동성 높음, 지정학적 리스크 높음';
+  if (vix > 15 || korvix > 20) return '변동성 정상 범위, 시장 안정적';
+  return '변동성 매우 낮음, 시장 침체 가능성';
+}
