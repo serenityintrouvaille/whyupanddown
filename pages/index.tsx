@@ -41,8 +41,8 @@ export default function Home() {
   const fetchInitialData = async () => {
     try {
       const [resultsRes, indicatorsRes] = await Promise.all([
-        axios.get('/api/results'),
-        axios.get('/api/market-indicators')
+        axios.get('/api/results').catch(() => ({ data: { success: false } })),
+        axios.get('/api/market-indicators').catch(() => ({ data: { success: false } }))
       ]);
 
       if (resultsRes.data.success) {
@@ -98,15 +98,15 @@ export default function Home() {
         <div className="header">
           <div>
             <h1>📊 Why Up & Down</h1>
-            <p>그날의 수혜주가 왜 올랐는지를 요약해주는 AI 금융 비서</p>
+            <p>그날의 수혜주가 왜 올랐는지 요약해주는 AI 금융 비서</p>
           </div>
           <button className="btn btn-primary" onClick={handleUpdate} disabled={loading}>
             {loading ? (
               <>
-                <span className="loading"></span> 분석 중...
+                <span className="loading"></span> 분석 중..
               </>
             ) : (
-              '🔄 지금 분석하기'
+              '📈 지금 분석하기'
             )}
           </button>
         </div>
@@ -114,17 +114,18 @@ export default function Home() {
         {error && <div className="error-message">⚠️ {error}</div>}
 
         {/* 탭 */}
-        <div style={{ marginBottom: '30px', borderBottom: '1px solid #262b3d' }}>
+        <div style={{ marginBottom: '30px', borderBottom: '1px solid #e5e7eb' }}>
           <button
             onClick={() => setActiveTab('overview')}
             style={{
-              background: activeTab === 'overview' ? '#6366f1' : 'transparent',
-              color: '#e2e8f0',
+              background: activeTab === 'overview' ? '#3b82f6' : 'transparent',
+              color: activeTab === 'overview' ? '#ffffff' : '#6b7280',
               border: 'none',
               padding: '10px 20px',
               cursor: 'pointer',
               marginRight: '10px',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              fontWeight: 500
             }}
           >
             📈 오늘의 수혜주
@@ -132,12 +133,14 @@ export default function Home() {
           <button
             onClick={() => setActiveTab('detailed')}
             style={{
-              background: activeTab === 'detailed' ? '#6366f1' : 'transparent',
-              color: '#e2e8f0',
+              background: activeTab === 'detailed' ? '#3b82f6' : 'transparent',
+              color: activeTab === 'detailed' ? '#ffffff' : '#6b7280',
               border: 'none',
               padding: '10px 20px',
               cursor: 'pointer',
-              borderRadius: '8px'
+              borderRadius: '8px',
+              fontWeight: 500,
+              opacity: !selectedSector ? 0.5 : 1
             }}
             disabled={!selectedSector}
           >
@@ -153,7 +156,7 @@ export default function Home() {
               {/* 유가 */}
               <div className="card card-glow">
                 <div className="stat-box">
-                  <div className="label">유가 (WTI)</div>
+                  <div className="label">🛢️ 유가 (WTI)</div>
                   <div className="value">${marketIndicators.oil.price.toFixed(2)}</div>
                   <div className={`change ${marketIndicators.oil.change < 0 ? 'negative' : ''}`}>
                     {marketIndicators.oil.change > 0 ? '+' : ''}
@@ -165,8 +168,8 @@ export default function Home() {
               {/* 환율 */}
               <div className="card card-glow">
                 <div className="stat-box">
-                  <div className="label">USD/KRW</div>
-                  <div className="value">₩{marketIndicators.exchangeRate.usdKrw.toFixed(0)}</div>
+                  <div className="label">💵 USD/KRW</div>
+                  <div className="value">{marketIndicators.exchangeRate.usdKrw.toFixed(0)}</div>
                   <div className={`change ${marketIndicators.exchangeRate.change < 0 ? 'negative' : ''}`}>
                     {marketIndicators.exchangeRate.change > 0 ? '+' : ''}
                     {marketIndicators.exchangeRate.change.toFixed(2)}%
@@ -177,7 +180,7 @@ export default function Home() {
               {/* 금값 */}
               <div className="card card-glow">
                 <div className="stat-box">
-                  <div className="label">금값 (XAU/USD)</div>
+                  <div className="label">🏆 금값 (XAU/USD)</div>
                   <div className="value">${marketIndicators.gold.price.toFixed(0)}</div>
                   <div className={`change ${marketIndicators.gold.change < 0 ? 'negative' : ''}`}>
                     {marketIndicators.gold.change > 0 ? '+' : ''}
@@ -189,7 +192,7 @@ export default function Home() {
               {/* KOSPI */}
               <div className="card card-glow">
                 <div className="stat-box">
-                  <div className="label">KOSPI 지수</div>
+                  <div className="label">📈 KOSPI 지수</div>
                   <div className="value">{marketIndicators.kospi.index.toFixed(0)}</div>
                   <div className={`change ${marketIndicators.kospi.change < 0 ? 'negative' : ''}`}>
                     {marketIndicators.kospi.change > 0 ? '+' : ''}
@@ -201,7 +204,7 @@ export default function Home() {
               {/* VIX */}
               <div className="card card-glow">
                 <div className="stat-box">
-                  <div className="label">VIX (미국 변동성)</div>
+                  <div className="label">📉 VIX (미국 변동성)</div>
                   <div className="value">{marketIndicators.volatility.vix.toFixed(1)}</div>
                   <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
                     {marketIndicators.volatility.vix > 20 ? '⚠️ 높음' : '✅ 정상'}
@@ -212,7 +215,7 @@ export default function Home() {
               {/* KOR-VIX */}
               <div className="card card-glow">
                 <div className="stat-box">
-                  <div className="label">KOR-VIX (한국 변동성)</div>
+                  <div className="label">📉 KOR-VIX (한국 변동성)</div>
                   <div className="value">{marketIndicators.volatility.korvix.toFixed(1)}</div>
                   <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
                     {marketIndicators.volatility.korvix > 25 ? '⚠️ 높음' : '✅ 정상'}
@@ -223,31 +226,33 @@ export default function Home() {
           </div>
         )}
 
-        {/* 오늘의 수혜주 탭 */}
+        {/* 오늘의 수혜주 */}
         {activeTab === 'overview' && results && (
           <div className="section">
             <h2>📈 오늘의 수혜주 Top 5</h2>
-            <div className="grid grid-3">
+            <div className="grid grid-1">
               {results.results?.map((result: Result, idx: number) => (
                 <div key={idx} className="card card-glow">
-                  <div style={{ marginBottom: '15px' }}>
-                    <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
-                      {result.sector}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '24px',
-                        fontWeight: 700,
-                        color: result.changeRate > 0 ? '#22d3ee' : '#ef4444',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      {result.changeRate > 0 ? '+' : ''}
-                      {result.changeRate.toFixed(2)}%
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
+                        {result.sector}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '24px',
+                          fontWeight: 700,
+                          color: result.changeRate > 0 ? '#10b981' : '#ef4444',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        {result.changeRate > 0 ? '+' : ''}
+                        {result.changeRate.toFixed(2)}%
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '13px', color: '#d1d5db', marginBottom: '15px', lineHeight: '1.5' }}>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '15px', lineHeight: '1.5' }}>
                     {result.summary}
                   </div>
 
@@ -269,14 +274,14 @@ export default function Home() {
 
             {results.formatted && (
               <div className="section" style={{ marginTop: '40px' }}>
-                <h3 style={{ marginBottom: '15px' }}>📋 일일 분석 리포트</h3>
+                <h3 style={{ marginBottom: '15px' }}>📊 일일 분석 리포트</h3>
                 <div className="card">
                   <pre
                     style={{
                       whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word',
                       fontSize: '12px',
-                      color: '#d1d5db'
+                      color: '#6b7280'
                     }}
                   >
                     {results.formatted}
@@ -287,147 +292,163 @@ export default function Home() {
           </div>
         )}
 
-        {/* 상세 분석 탭 */}
+        {/* 상세 분석 */}
         {activeTab === 'detailed' && detailedAnalysis && (
           <div className="section">
-            <h2>📊 {detailedAnalysis.sector} - 상세 분석</h2>
+            <h2>🔍 {detailedAnalysis.sector} - 상세 분석</h2>
 
-            {/* 기사별 요약 */}
-            <div style={{ marginBottom: '40px' }}>
-              <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
-                📰 관련 기사 ({detailedAnalysis.articles.length}개)
-              </h3>
-              <div className="table-wrapper">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>기사</th>
-                      <th>출처</th>
-                      <th>요약</th>
-                      <th>관련성</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detailedAnalysis.articles.map((article, idx) => (
-                      <tr key={idx}>
-                        <td style={{ maxWidth: '300px' }}>
-                          <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1' }}>
-                            {article.title.substring(0, 40)}...
-                          </a>
-                        </td>
-                        <td>{article.source}</td>
-                        <td style={{ fontSize: '12px', color: '#d1d5db' }}>{article.summary}</td>
-                        <td>
-                          <span className="badge badge-success">{article.relevanceScore}%</span>
-                        </td>
+            {/* 기사 요약 */}
+            {detailedAnalysis.articles && detailedAnalysis.articles.length > 0 && (
+              <div style={{ marginBottom: '40px' }}>
+                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
+                  📰 관련 기사 ({detailedAnalysis.articles.length}개)
+                </h3>
+                <div className="table-wrapper">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>제목</th>
+                        <th>요약</th>
+                        <th>관련도</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {detailedAnalysis.articles.map((article: any, idx: number) => (
+                        <tr key={idx}>
+                          <td>{article.title || '제목 없음'}</td>
+                          <td>{article.summary || '요약 없음'}</td>
+                          <td>{article.relevanceScore || 0}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* 기사 관계성 */}
-            <div style={{ marginBottom: '40px' }}>
-              <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>🔗 기사 관계성</h3>
-              <div className="card">{detailedAnalysis.articleRelationship}</div>
-            </div>
-
-            {/* 역사 추적 */}
-            <div style={{ marginBottom: '40px' }}>
-              <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>📅 최근 3개월 역사</h3>
-              <div className="card">
-                <div style={{ marginBottom: '15px' }}>
-                  <strong style={{ color: '#22d3ee' }}>{detailedAnalysis.historicalTrend.period}</strong>
-                </div>
-                <div style={{ marginBottom: '15px' }}>
-                  <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>주요 이벤트:</h4>
-                  <ul style={{ marginLeft: '20px', color: '#d1d5db' }}>
-                    {detailedAnalysis.historicalTrend.keyEvents.map((event: string, idx: number) => (
-                      <li key={idx}>{event}</li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>결론:</h4>
-                  <p style={{ color: '#d1d5db' }}>{detailedAnalysis.historicalTrend.conclusion}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* 지정학적 & 매크로 경제 분석 */}
-            {detailedAnalysis.geopolitical && (
-              <div>
-                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>🌐 국제 정세 & 매크로 경제 분석</h3>
-
-                <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-                  {/* 국제 정세 */}
-                  <div className="card">
-                    <h4 style={{ marginBottom: '12px', fontSize: '13px', fontWeight: 600, color: '#22d3ee' }}>🔴 국제 정세 이슈</h4>
-                    <ul style={{ marginLeft: '20px', color: '#d1d5db', fontSize: '12px' }}>
-                      {detailedAnalysis.geopolitical.internationalIssues.map((issue: string, idx: number) => (
-                        <li key={idx} style={{ marginBottom: '6px' }}>{issue}</li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* 매크로 경제 */}
-                  <div className="card">
-                    <h4 style={{ marginBottom: '12px', fontSize: '13px', fontWeight: 600, color: '#22d3ee' }}>📊 매크로 경제 요인</h4>
-                    <ul style={{ marginLeft: '20px', color: '#d1d5db', fontSize: '12px' }}>
-                      {detailedAnalysis.geopolitical.macroeconomicFactors.map((factor: string, idx: number) => (
-                        <li key={idx} style={{ marginBottom: '6px' }}>{factor}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* 주요국 움직임 */}
-                <div style={{ marginTop: '20px' }}>
-                  <h4 style={{ marginBottom: '12px', fontSize: '13px', fontWeight: 600, color: '#22d3ee' }}>🌍 주요국 움직임</h4>
-                  <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
-                      <strong style={{ color: '#1f2937' }}>🇺🇸 미국</strong>
-                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.usa}</p>
-                    </div>
-                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
-                      <strong style={{ color: '#1f2937' }}>🇰🇷 한국</strong>
-                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.korea}</p>
-                    </div>
-                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
-                      <strong style={{ color: '#1f2937' }}>🇨🇳 중국</strong>
-                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.china}</p>
-                    </div>
-                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
-                      <strong style={{ color: '#1f2937' }}>🇪🇺 유럽</strong>
-                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.europe}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 종합 분석 */}
-                <div style={{ marginTop: '20px', padding: '16px', background: '#dbeafe', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
-                  <h4 style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#0c4a6e' }}>💡 종합 분석</h4>
-                  <p style={{ color: '#0c4a6e', fontSize: '12px', lineHeight: '1.6' }}>
-                    {detailedAnalysis.geopolitical.synthesis}
+            {detailedAnalysis.articleRelationship && (
+              <div style={{ marginBottom: '40px' }}>
+                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
+                  🔗 기사 관계성 분석
+                </h3>
+                <div className="card">
+                  <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
+                    {detailedAnalysis.articleRelationship}
                   </p>
                 </div>
               </div>
             )}
+
+            {/* 역사 추적 */}
+            {detailedAnalysis.historicalTrend && (
+              <div style={{ marginBottom: '40px' }}>
+                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
+                  📅 최근 3개월 역사
+                </h3>
+                <div className="card">
+                  <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
+                    {detailedAnalysis.historicalTrend.period || ''}
+                  </p>
+                  {detailedAnalysis.historicalTrend.keyEvents && (
+                    <ul style={{ fontSize: '13px', color: '#6b7280', marginTop: '10px' }}>
+                      {detailedAnalysis.historicalTrend.keyEvents.map((event: string, idx: number) => (
+                        <li key={idx}>- {event}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '10px', fontWeight: 600 }}>
+                    결론: {detailedAnalysis.historicalTrend.conclusion || ''}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 지정학적 분석 */}
+            {detailedAnalysis.geopolitical && (
+              <div style={{ marginBottom: '40px' }}>
+                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
+                  🌐 국제 정세 & 매크로 경제 분석
+                </h3>
+
+                {/* 국제 정세 이슈 */}
+                {detailedAnalysis.geopolitical.internationalIssues && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px' }}>
+                      🔴 국제 정세 이슈
+                    </h4>
+                    <ul style={{ fontSize: '13px', color: '#6b7280' }}>
+                      {detailedAnalysis.geopolitical.internationalIssues.map((issue: string, idx: number) => (
+                        <li key={idx}>- {issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 매크로 경제 요인 */}
+                {detailedAnalysis.geopolitical.macroeconomicFactors && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px' }}>
+                      📊 매크로 경제 요인
+                    </h4>
+                    <ul style={{ fontSize: '13px', color: '#6b7280' }}>
+                      {detailedAnalysis.geopolitical.macroeconomicFactors.map((factor: string, idx: number) => (
+                        <li key={idx}>- {factor}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* 주요국 움직임 */}
+                {detailedAnalysis.geopolitical.countryMovements && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px' }}>
+                      🌍 주요국 움직임
+                    </h4>
+                    <div className="grid grid-2" style={{ gap: '10px' }}>
+                      <div className="card" style={{ padding: '10px' }}>
+                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇺🇸 미국</p>
+                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {detailedAnalysis.geopolitical.countryMovements.usa || ''}
+                        </p>
+                      </div>
+                      <div className="card" style={{ padding: '10px' }}>
+                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇰🇷 한국</p>
+                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {detailedAnalysis.geopolitical.countryMovements.korea || ''}
+                        </p>
+                      </div>
+                      <div className="card" style={{ padding: '10px' }}>
+                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇨🇳 중국</p>
+                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {detailedAnalysis.geopolitical.countryMovements.china || ''}
+                        </p>
+                      </div>
+                      <div className="card" style={{ padding: '10px' }}>
+                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇪🇺 유럽</p>
+                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
+                          {detailedAnalysis.geopolitical.countryMovements.europe || ''}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 종합 분석 */}
+                {detailedAnalysis.geopolitical.synthesis && (
+                  <div style={{ marginBottom: '20px', backgroundColor: '#f3f4f6', padding: '15px', borderRadius: '8px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '10px' }}>
+                      💡 종합 분석
+                    </h4>
+                    <p style={{ fontSize: '13px', color: '#1f2937', lineHeight: '1.6' }}>
+                      {detailedAnalysis.geopolitical.synthesis}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
-
-        {!results && !loading && (
-          <div style={{ textAlign: 'center', color: '#9ca3af', padding: '40px' }}>
-            분석 결과를 기다리는 중입니다... "지금 분석하기"를 클릭하세요.
-          </div>
-        )}
-
-        {/* 푸터 */}
-        <footer style={{ marginTop: '60px', borderTop: '1px solid #262b3d', paddingTop: '30px', color: '#9ca3af', textAlign: 'center', fontSize: '12px' }}>
-          <p>Why Up & Down v2.0 | 매일 오후 4:00 KST 자동 업데이트</p>
-          <p style={{ marginTop: '10px' }}>3명의 AI 에이전트(Trader, PM, QA)가 협력하여 분석</p>
-        </footer>
       </div>
     </div>
   );

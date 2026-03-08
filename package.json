@@ -1,7 +1,7 @@
 {
   "name": "whyupanddown",
   "version": "2.0.0",
-  "description": "그날의 수혜주가 왜 올랐는지를 요약해주는 AI 금융 비서",
+  "description": "그날???�혜주�? ???�랐?��?�??�약?�주??AI 금융 비서",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,18 +10,18 @@
     "update": "node scripts/daily-update.js"
   },
   "dependencies": {
-    "next": "^14.0.4",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "@anthropic-ai/sdk": "^0.28.0",
     "axios": "^1.6.2",
     "cheerio": "^1.0.0-rc.12",
-    "anthropic": "^0.14.1",
-    "newsapi": "^1.5.1"
+    "newsapi": "^2.4.1",
+    "next": "^14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
     "@types/node": "^20.10.5",
     "@types/react": "^18.2.45",
-    "@types/react-dom": "^18.2.18"
+    "@types/react-dom": "^18.2.18",
+    "typescript": "^5.3.3"
   }
 }
