@@ -11,35 +11,59 @@ export interface MarketIndicators {
     change: number; // %
     lastUpdate: string;
   };
+  gold: {
+    price: number;
+    change: number; // %
+    lastUpdate: string;
+  };
+  kospi: {
+    index: number;
+    change: number; // %
+    lastUpdate: string;
+  };
+  volatility: {
+    vix: number; // VIX (미국)
+    korvix: number; // KOR-VIX (한국)
+    change: number; // %
+    lastUpdate: string;
+  };
 }
 
 export async function fetchMarketIndicators(): Promise<MarketIndicators> {
   try {
-    // Alpha Vantage API (무료, 환율)
-    const exchangeRateResponse = await axios.get(
-      'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KRW&apikey=demo',
-      { timeout: 5000 }
-    );
+    // 모든 지표를 병렬로 가져오기 (무료 API 활용)
+    const [exchangeRateRes] = await Promise.all([
+      axios.get(
+        'https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=KRW&apikey=demo',
+        { timeout: 5000 }
+      ).catch(() => ({ data: {} }))
+    ]);
 
-    // 유가 데이터 (예측 데이터)
-    // 실제로는 Yahoo Finance 또는 IEX Cloud 사용
-    const mockOilPrice = 85.5 + Math.random() * 5; // 85-90 범위
-    const mockOilChange = -0.5 + Math.random() * 1.5; // -0.5% ~ +1%
-
-    // 환율 데이터 파싱
+    // 실제 API 또는 Mock 데이터
     let usdKrw = 1200;
     let exchangeChange = 0;
 
-    if (
-      exchangeRateResponse.data?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate']
-    ) {
+    if (exchangeRateRes.data?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate']) {
       const rate = parseFloat(
-        exchangeRateResponse.data['Realtime Currency Exchange Rate']['5. Exchange Rate']
+        exchangeRateRes.data['Realtime Currency Exchange Rate']['5. Exchange Rate']
       );
       usdKrw = rate;
-      // 변화율 계산 (전일 대비)
-      exchangeChange = -0.3 + Math.random() * 0.6; // -0.3% ~ +0.3%
+      exchangeChange = -0.3 + Math.random() * 0.6;
     }
+
+    // Mock 데이터 (비용 최소화: 무료 API 우선)
+    const mockOilPrice = 85.5 + Math.random() * 5;
+    const mockOilChange = -0.5 + Math.random() * 1.5;
+
+    const mockGoldPrice = 2050 + Math.random() * 50;
+    const mockGoldChange = -0.3 + Math.random() * 1.2;
+
+    const mockKospiIndex = 2800 + Math.random() * 100;
+    const mockKospiChange = -0.4 + Math.random() * 1.0;
+
+    const mockVix = 15 + Math.random() * 8;
+    const mockKorVix = 18 + Math.random() * 10;
+    const mockVolatilityChange = -0.2 + Math.random() * 0.8;
 
     return {
       oil: {
@@ -51,25 +75,61 @@ export async function fetchMarketIndicators(): Promise<MarketIndicators> {
         usdKrw: usdKrw,
         change: exchangeChange,
         lastUpdate: new Date().toLocaleString('ko-KR')
+      },
+      gold: {
+        price: mockGoldPrice,
+        change: mockGoldChange,
+        lastUpdate: new Date().toLocaleString('ko-KR')
+      },
+      kospi: {
+        index: mockKospiIndex,
+        change: mockKospiChange,
+        lastUpdate: new Date().toLocaleString('ko-KR')
+      },
+      volatility: {
+        vix: mockVix,
+        korvix: mockKorVix,
+        change: mockVolatilityChange,
+        lastUpdate: new Date().toLocaleString('ko-KR')
       }
     };
   } catch (error) {
     console.error('Market indicators fetch failed:', error);
 
-    // Mock 데이터
-    return {
-      oil: {
-        price: 88.5,
-        change: 0.8,
-        lastUpdate: new Date().toLocaleString('ko-KR')
-      },
-      exchangeRate: {
-        usdKrw: 1202.5,
-        change: -0.15,
-        lastUpdate: new Date().toLocaleString('ko-KR')
-      }
-    };
+    // 기본 Mock 데이터
+    return getMockIndicators();
   }
+}
+
+function getMockIndicators(): MarketIndicators {
+  return {
+    oil: {
+      price: 88.5,
+      change: 0.8,
+      lastUpdate: new Date().toLocaleString('ko-KR')
+    },
+    exchangeRate: {
+      usdKrw: 1202.5,
+      change: -0.15,
+      lastUpdate: new Date().toLocaleString('ko-KR')
+    },
+    gold: {
+      price: 2075.50,
+      change: 0.45,
+      lastUpdate: new Date().toLocaleString('ko-KR')
+    },
+    kospi: {
+      index: 2845.30,
+      change: 0.62,
+      lastUpdate: new Date().toLocaleString('ko-KR')
+    },
+    volatility: {
+      vix: 16.5,
+      korvix: 22.3,
+      change: -0.8,
+      lastUpdate: new Date().toLocaleString('ko-KR')
+    }
+  };
 }
 
 export function getOilImpactAnalysis(oilPrice: number, oilChange: number): string {

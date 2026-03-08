@@ -12,6 +12,9 @@ interface Result {
 interface MarketIndicators {
   oil: { price: number; change: number };
   exchangeRate: { usdKrw: number; change: number };
+  gold: { price: number; change: number };
+  kospi: { index: number; change: number };
+  volatility: { vix: number; korvix: number; change: number };
 }
 
 interface DetailedAnalysis {
@@ -19,6 +22,7 @@ interface DetailedAnalysis {
   articles: any[];
   articleRelationship: string;
   historicalTrend: any;
+  geopolitical?: any;
 }
 
 export default function Home() {
@@ -141,11 +145,12 @@ export default function Home() {
           </button>
         </div>
 
-        {/* 국제 지표 */}
+        {/* 국제 지표 & 시장 현황 */}
         {marketIndicators && (
           <div className="section">
-            <h2>🌍 국제 지표</h2>
-            <div className="grid grid-2">
+            <h2>🌍 국제 지표 & 시장 현황</h2>
+            <div className="grid grid-3">
+              {/* 유가 */}
               <div className="card card-glow">
                 <div className="stat-box">
                   <div className="label">유가 (WTI)</div>
@@ -156,6 +161,8 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
+              {/* 환율 */}
               <div className="card card-glow">
                 <div className="stat-box">
                   <div className="label">USD/KRW</div>
@@ -163,6 +170,52 @@ export default function Home() {
                   <div className={`change ${marketIndicators.exchangeRate.change < 0 ? 'negative' : ''}`}>
                     {marketIndicators.exchangeRate.change > 0 ? '+' : ''}
                     {marketIndicators.exchangeRate.change.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+
+              {/* 금값 */}
+              <div className="card card-glow">
+                <div className="stat-box">
+                  <div className="label">금값 (XAU/USD)</div>
+                  <div className="value">${marketIndicators.gold.price.toFixed(0)}</div>
+                  <div className={`change ${marketIndicators.gold.change < 0 ? 'negative' : ''}`}>
+                    {marketIndicators.gold.change > 0 ? '+' : ''}
+                    {marketIndicators.gold.change.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+
+              {/* KOSPI */}
+              <div className="card card-glow">
+                <div className="stat-box">
+                  <div className="label">KOSPI 지수</div>
+                  <div className="value">{marketIndicators.kospi.index.toFixed(0)}</div>
+                  <div className={`change ${marketIndicators.kospi.change < 0 ? 'negative' : ''}`}>
+                    {marketIndicators.kospi.change > 0 ? '+' : ''}
+                    {marketIndicators.kospi.change.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+
+              {/* VIX */}
+              <div className="card card-glow">
+                <div className="stat-box">
+                  <div className="label">VIX (미국 변동성)</div>
+                  <div className="value">{marketIndicators.volatility.vix.toFixed(1)}</div>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    {marketIndicators.volatility.vix > 20 ? '⚠️ 높음' : '✅ 정상'}
+                  </div>
+                </div>
+              </div>
+
+              {/* KOR-VIX */}
+              <div className="card card-glow">
+                <div className="stat-box">
+                  <div className="label">KOR-VIX (한국 변동성)</div>
+                  <div className="value">{marketIndicators.volatility.korvix.toFixed(1)}</div>
+                  <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
+                    {marketIndicators.volatility.korvix > 25 ? '⚠️ 높음' : '✅ 정상'}
                   </div>
                 </div>
               </div>
@@ -281,7 +334,7 @@ export default function Home() {
             </div>
 
             {/* 역사 추적 */}
-            <div>
+            <div style={{ marginBottom: '40px' }}>
               <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>📅 최근 3개월 역사</h3>
               <div className="card">
                 <div style={{ marginBottom: '15px' }}>
@@ -301,6 +354,66 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {/* 지정학적 & 매크로 경제 분석 */}
+            {detailedAnalysis.geopolitical && (
+              <div>
+                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>🌐 국제 정세 & 매크로 경제 분석</h3>
+
+                <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+                  {/* 국제 정세 */}
+                  <div className="card">
+                    <h4 style={{ marginBottom: '12px', fontSize: '13px', fontWeight: 600, color: '#22d3ee' }}>🔴 국제 정세 이슈</h4>
+                    <ul style={{ marginLeft: '20px', color: '#d1d5db', fontSize: '12px' }}>
+                      {detailedAnalysis.geopolitical.internationalIssues.map((issue: string, idx: number) => (
+                        <li key={idx} style={{ marginBottom: '6px' }}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* 매크로 경제 */}
+                  <div className="card">
+                    <h4 style={{ marginBottom: '12px', fontSize: '13px', fontWeight: 600, color: '#22d3ee' }}>📊 매크로 경제 요인</h4>
+                    <ul style={{ marginLeft: '20px', color: '#d1d5db', fontSize: '12px' }}>
+                      {detailedAnalysis.geopolitical.macroeconomicFactors.map((factor: string, idx: number) => (
+                        <li key={idx} style={{ marginBottom: '6px' }}>{factor}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {/* 주요국 움직임 */}
+                <div style={{ marginTop: '20px' }}>
+                  <h4 style={{ marginBottom: '12px', fontSize: '13px', fontWeight: 600, color: '#22d3ee' }}>🌍 주요국 움직임</h4>
+                  <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
+                      <strong style={{ color: '#1f2937' }}>🇺🇸 미국</strong>
+                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.usa}</p>
+                    </div>
+                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
+                      <strong style={{ color: '#1f2937' }}>🇰🇷 한국</strong>
+                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.korea}</p>
+                    </div>
+                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
+                      <strong style={{ color: '#1f2937' }}>🇨🇳 중국</strong>
+                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.china}</p>
+                    </div>
+                    <div style={{ padding: '12px', background: '#f8f9fa', borderRadius: '8px', fontSize: '12px' }}>
+                      <strong style={{ color: '#1f2937' }}>🇪🇺 유럽</strong>
+                      <p style={{ color: '#6b7280', marginTop: '8px' }}>{detailedAnalysis.geopolitical.countryMovements.europe}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 종합 분석 */}
+                <div style={{ marginTop: '20px', padding: '16px', background: '#dbeafe', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                  <h4 style={{ marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: '#0c4a6e' }}>💡 종합 분석</h4>
+                  <p style={{ color: '#0c4a6e', fontSize: '12px', lineHeight: '1.6' }}>
+                    {detailedAnalysis.geopolitical.synthesis}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

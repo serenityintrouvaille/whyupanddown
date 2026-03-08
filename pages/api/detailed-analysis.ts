@@ -6,10 +6,12 @@ import {
   analyzeHistoricalTrend,
   DetailedAnalysisResult
 } from '@/lib/detailed-analysis';
+import { analyzeGeopoliticalContext } from '@/lib/geopolitical-analysis';
+import { fetchMarketIndicators } from '@/lib/market-indicators';
 
 interface ResponseData {
   success: boolean;
-  data?: DetailedAnalysisResult;
+  data?: DetailedAnalysisResult & { geopolitical: any };
   error?: string;
 }
 
@@ -43,11 +45,21 @@ export default async function handler(
       articles.map((a) => a.summary)
     );
 
-    const result: DetailedAnalysisResult = {
+    // 5. 국제 정세 & 매크로 경제 분석 (비용 최소화: 지표 수집 시)
+    const indicators = await fetchMarketIndicators();
+    const geopolitical = await analyzeGeopoliticalContext(sector, news, {
+      oil: indicators.oil.price,
+      exchangeRate: indicators.exchangeRate.usdKrw,
+      gold: indicators.gold.price,
+      kospi: indicators.kospi.index
+    });
+
+    const result = {
       sector: sector,
       articles: articles,
       articleRelationship: relationship,
-      historicalTrend: historicalTrend
+      historicalTrend: historicalTrend,
+      geopolitical: geopolitical
     };
 
     res.status(200).json({
