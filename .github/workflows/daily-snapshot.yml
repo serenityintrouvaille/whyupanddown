@@ -1,26 +1,22 @@
-name: Rolling Ingest
+name: Daily Snapshot
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '0 7 * * *'
   workflow_dispatch:
 
-concurrency:
-  group: rolling-ingest
-  cancel-in-progress: true
-
 jobs:
-  ingest:
+  snapshot:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Trigger rolling ingest endpoint
+      - name: Trigger daily snapshot endpoint
         env:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           curl --fail --show-error --silent \
-            -X POST "${APP_BASE_URL}/api/ingest" \
+            -X POST "${APP_BASE_URL}/api/update" \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json"

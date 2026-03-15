@@ -1,455 +1,290 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import '../styles/globals.css';
+import { STOCK_BY_ID } from '@/data/middle-east-catalog';
+import type {
+  ClassifiedArticle,
+  DailySnapshotPayload,
+  RollingIngestPayload,
+  SignalBoard,
+  SignalThemeId
+} from '@/lib/middle-east-types';
+import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 
-interface Result {
-  sector: string;
-  changeRate: number;
-  summary: string;
-  continuity: string;
+interface ResultsResponse {
+  success: boolean;
+  data?: {
+    snapshot: DailySnapshotPayload | null;
+    rolling: RollingIngestPayload | null;
+    board: SignalBoard | null;
+  };
+  error?: string;
 }
 
-interface MarketIndicators {
-  oil: { price: number; change: number };
-  exchangeRate: { usdKrw: number; change: number };
-  gold: { price: number; change: number };
-  kospi: { index: number; change: number };
-  volatility: { vix: number; korvix: number; change: number };
+function severityLabel(value: ClassifiedArticle['severity']) {
+  if (value === 'high') return '높음';
+  if (value === 'medium') return '중간';
+  return '낮음';
 }
 
-interface DetailedAnalysis {
-  sector: string;
-  articles: any[];
-  articleRelationship: string;
-  historicalTrend: any;
-  geopolitical?: any;
+function formatTime(value: string) {
+  return new Date(value).toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function themeLabel(themeId: SignalThemeId) {
+  return {
+    defense: '방산',
+    oil: '유가',
+    energy: '에너지',
+    shipping: '해운/물류',
+    semiconductor: '반도체',
+    materials: '원자재'
+  }[themeId];
 }
 
 export default function Home() {
-  const [results, setResults] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'detailed'>('overview');
-  const [selectedSector, setSelectedSector] = useState<string | null>(null);
-  const [detailedAnalysis, setDetailedAnalysis] = useState<DetailedAnalysis | null>(null);
-  const [marketIndicators, setMarketIndicators] = useState<MarketIndicators | null>(null);
+  const [board, setBoard] = useState<SignalBoard | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedThemeId, setSelectedThemeId] = useState<SignalThemeId>('defense');
 
   useEffect(() => {
-    fetchInitialData();
+    const fetchResults = async () => {
+      try {
+        const response = await axios.get<ResultsResponse>('/api/results');
+        if (response.data.success && response.data.data?.board) {
+          setBoard(response.data.data.board);
+          setSelectedThemeId(response.data.data.board.defaultThemeId);
+        }
+      } catch {
+        setError('피드를 불러오지 못했습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchResults();
   }, []);
 
-  const fetchInitialData = async () => {
-    try {
-      const [resultsRes, indicatorsRes] = await Promise.all([
-        axios.get('/api/results').catch(() => ({ data: { success: false } })),
-        axios.get('/api/market-indicators').catch(() => ({ data: { success: false } }))
-      ]);
-
-      if (resultsRes.data.success) {
-        setResults(resultsRes.data.data);
-      }
-      if (indicatorsRes.data.success) {
-        setMarketIndicators(indicatorsRes.data.data.indicators);
-      }
-    } catch (err) {
-      console.error('Failed to fetch initial data:', err);
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      return;
     }
-  };
 
-  const handleUpdate = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const response = await axios.post('/api/update');
-      if (response.data.success) {
-        setResults(response.data);
-        await new Promise((r) => setTimeout(r, 1000));
-        await fetchInitialData();
-      } else {
-        setError(response.data.error || 'Update failed');
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Update failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const refresh = async () => {
+      try {
+        const response = await axios.get<ResultsResponse>('/api/results');
+        if (response.data.success && response.data.data?.board) {
+          setBoard(response.data.data.board);
+        }
+      } catch {}
+    };
 
-  const handleViewDetails = async (sector: string) => {
-    setSelectedSector(sector);
-    setLoading(true);
-    try {
-      const response = await axios.post('/api/detailed-analysis', { sector });
-      if (response.data.success) {
-        setDetailedAnalysis(response.data.data);
-        setActiveTab('detailed');
-      }
-    } catch (err) {
-      setError('상세 분석을 불러올 수 없습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const channel = supabase
+      .channel('middle-east-feed-live')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'rolling_updates' },
+        refresh
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'daily_snapshots' },
+        refresh
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const selectedTheme = useMemo(
+    () => board?.themes.find((theme) => theme.id === selectedThemeId) || board?.themes[0] || null,
+    [board, selectedThemeId]
+  );
+
+  const selectedStocks = useMemo(
+    () => (selectedTheme ? board?.stockBuckets[selectedTheme.id] || [] : []),
+    [board, selectedTheme]
+  );
 
   return (
-    <div className="gradient-bg" style={{ minHeight: '100vh', padding: '20px' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        {/* 헤더 */}
-        <div className="header">
+    <div className="feed-shell">
+      <header className="topbar">
+        <div>
+          <h1>Middle East War Signal Map</h1>
+        </div>
+        <div className="status-card">
+          <span>마지막 업데이트</span>
+          <strong>{board ? formatTime(board.updatedAt) : '-'}</strong>
+          <small>실시간 수집 5~10분 간격</small>
+        </div>
+      </header>
+
+      {error && <div className="banner error">{error}</div>}
+      {loading && <div className="banner">피드를 불러오는 중입니다.</div>}
+
+      <section className="panel">
+        <div className="panel-head">
           <div>
-            <h1>📊 Why Up & Down</h1>
-            <p>그날의 수혜주가 왜 올랐는지 요약해주는 AI 금융 비서</p>
+            <p className="eyebrow">RED SIGN ALERT</p>
+            <h2>오늘의 핵심 Alert</h2>
           </div>
-          <button className="btn btn-primary" onClick={handleUpdate} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="loading"></span> 분석 중..
-              </>
-            ) : (
-              '📈 지금 분석하기'
-            )}
-          </button>
         </div>
 
-        {error && <div className="error-message">⚠️ {error}</div>}
+        <div className="alert-grid">
+          {(board?.alerts || []).map((article) => (
+            <a key={article.id} className="alert-card" href={article.url} target="_blank" rel="noreferrer">
+              <div className="alert-dot" />
+              <div className="alert-meta">
+                <span>{formatTime(article.publishedAt)}</span>
+                <span>{article.source}</span>
+              </div>
+              <strong>{article.title}</strong>
+              <p>{article.shortSummary}</p>
+              <div className="tag-row">
+                {article.relatedThemes.map((theme) => (
+                  <span key={theme} className="tag">
+                    {themeLabel(theme)}
+                  </span>
+                ))}
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
 
-        {/* 탭 */}
-        <div style={{ marginBottom: '30px', borderBottom: '1px solid #e5e7eb' }}>
-          <button
-            onClick={() => setActiveTab('overview')}
-            style={{
-              background: activeTab === 'overview' ? '#3b82f6' : 'transparent',
-              color: activeTab === 'overview' ? '#ffffff' : '#6b7280',
-              border: 'none',
-              padding: '10px 20px',
-              cursor: 'pointer',
-              marginRight: '10px',
-              borderRadius: '8px',
-              fontWeight: 500
-            }}
-          >
-            📈 오늘의 수혜주
-          </button>
-          <button
-            onClick={() => setActiveTab('detailed')}
-            style={{
-              background: activeTab === 'detailed' ? '#3b82f6' : 'transparent',
-              color: activeTab === 'detailed' ? '#ffffff' : '#6b7280',
-              border: 'none',
-              padding: '10px 20px',
-              cursor: 'pointer',
-              borderRadius: '8px',
-              fontWeight: 500,
-              opacity: !selectedSector ? 0.5 : 1
-            }}
-            disabled={!selectedSector}
-          >
-            📊 상세 분석
-          </button>
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <p className="eyebrow">실시간 뉴스 타임라인</p>
+          </div>
         </div>
 
-        {/* 국제 지표 & 시장 현황 */}
-        {marketIndicators && (
-          <div className="section">
-            <h2>🌍 국제 지표 & 시장 현황</h2>
-            <div className="grid grid-3">
-              {/* 유가 */}
-              <div className="card card-glow">
-                <div className="stat-box">
-                  <div className="label">🛢️ 유가 (WTI)</div>
-                  <div className="value">${marketIndicators.oil.price.toFixed(2)}</div>
-                  <div className={`change ${marketIndicators.oil.change < 0 ? 'negative' : ''}`}>
-                    {marketIndicators.oil.change > 0 ? '+' : ''}
-                    {marketIndicators.oil.change.toFixed(2)}%
+        <div className="timeline">
+          {(board?.timeline || []).map((article) => (
+            <a key={article.id} className="timeline-row" href={article.url} target="_blank" rel="noreferrer">
+              <div className="timeline-left">
+                <span className={`timeline-dot ${article.alert ? 'alert' : ''}`} />
+                <span className="timeline-line" />
+              </div>
+              <div className="timeline-card">
+                <div className="timeline-top">
+                  <span className="timeline-time">{formatTime(article.publishedAt)}</span>
+                  <span className={`severity ${article.severity}`}>중요도 {severityLabel(article.severity)}</span>
+                </div>
+                <strong>{article.title}</strong>
+                <p>{article.shortSummary}</p>
+                <div className="timeline-bottom">
+                  <span>{article.source}</span>
+                  <div className="tag-row">
+                    {article.relatedThemes.map((theme) => (
+                      <span key={`${article.id}-${theme}`} className="tag subtle">
+                        {themeLabel(theme)}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
+            </a>
+          ))}
+        </div>
+      </section>
 
-              {/* 환율 */}
-              <div className="card card-glow">
-                <div className="stat-box">
-                  <div className="label">💵 USD/KRW</div>
-                  <div className="value">{marketIndicators.exchangeRate.usdKrw.toFixed(0)}</div>
-                  <div className={`change ${marketIndicators.exchangeRate.change < 0 ? 'negative' : ''}`}>
-                    {marketIndicators.exchangeRate.change > 0 ? '+' : ''}
-                    {marketIndicators.exchangeRate.change.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
-
-              {/* 금값 */}
-              <div className="card card-glow">
-                <div className="stat-box">
-                  <div className="label">🏆 금값 (XAU/USD)</div>
-                  <div className="value">${marketIndicators.gold.price.toFixed(0)}</div>
-                  <div className={`change ${marketIndicators.gold.change < 0 ? 'negative' : ''}`}>
-                    {marketIndicators.gold.change > 0 ? '+' : ''}
-                    {marketIndicators.gold.change.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
-
-              {/* KOSPI */}
-              <div className="card card-glow">
-                <div className="stat-box">
-                  <div className="label">📈 KOSPI 지수</div>
-                  <div className="value">{marketIndicators.kospi.index.toFixed(0)}</div>
-                  <div className={`change ${marketIndicators.kospi.change < 0 ? 'negative' : ''}`}>
-                    {marketIndicators.kospi.change > 0 ? '+' : ''}
-                    {marketIndicators.kospi.change.toFixed(2)}%
-                  </div>
-                </div>
-              </div>
-
-              {/* VIX */}
-              <div className="card card-glow">
-                <div className="stat-box">
-                  <div className="label">📉 VIX (미국 변동성)</div>
-                  <div className="value">{marketIndicators.volatility.vix.toFixed(1)}</div>
-                  <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                    {marketIndicators.volatility.vix > 20 ? '⚠️ 높음' : '✅ 정상'}
-                  </div>
-                </div>
-              </div>
-
-              {/* KOR-VIX */}
-              <div className="card card-glow">
-                <div className="stat-box">
-                  <div className="label">📉 KOR-VIX (한국 변동성)</div>
-                  <div className="value">{marketIndicators.volatility.korvix.toFixed(1)}</div>
-                  <div style={{ fontSize: '12px', color: '#666', marginTop: '8px' }}>
-                    {marketIndicators.volatility.korvix > 25 ? '⚠️ 높음' : '✅ 정상'}
-                  </div>
-                </div>
-              </div>
-            </div>
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <p className="eyebrow">주식 테마맵</p>
+            <h2>테마주 관련 뉴스 모아보기</h2>
           </div>
-        )}
+        </div>
 
-        {/* 오늘의 수혜주 */}
-        {activeTab === 'overview' && results && (
-          <div className="section">
-            <h2>📈 오늘의 수혜주 Top 5</h2>
-            <div className="grid grid-1">
-              {results.results?.map((result: Result, idx: number) => (
-                <div key={idx} className="card card-glow">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '8px' }}>
-                        {result.sector}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '24px',
-                          fontWeight: 700,
-                          color: result.changeRate > 0 ? '#10b981' : '#ef4444',
-                          marginBottom: '8px'
-                        }}
-                      >
-                        {result.changeRate > 0 ? '+' : ''}
-                        {result.changeRate.toFixed(2)}%
-                      </div>
-                    </div>
-                  </div>
+        <div className="theme-grid">
+          {(board?.themes || []).map((theme) => (
+            <button
+              key={theme.id}
+              type="button"
+              className={`theme-tile ${selectedTheme?.id === theme.id ? 'active' : ''}`}
+              onClick={() => setSelectedThemeId(theme.id)}
+            >
+              <div className="theme-tile-top">
+                <strong>{theme.label}</strong>
+                <span>{theme.newsCount}건</span>
+              </div>
+              <p>{theme.currentIssue}</p>
+              <div className="tag-row">
+                {theme.stockIds.slice(0, 4).map((stockId) => (
+                  <span key={stockId} className="tag subtle">
+                    {STOCK_BY_ID[stockId]?.name || stockId}
+                  </span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
 
-                  <div style={{ fontSize: '13px', color: '#6b7280', marginBottom: '15px', lineHeight: '1.5' }}>
-                    {result.summary}
-                  </div>
+      <section className="panel">
+        <div className="panel-head">
+          <div>
+            <p className="eyebrow">종목별 연관 뉴스</p>
+            <h2>{selectedTheme?.label || '선택된 테마'} 대표 종목</h2>
+          </div>
+        </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className="badge badge-primary" style={{ fontSize: '11px' }}>
-                      {result.continuity}
-                    </span>
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => handleViewDetails(result.sector)}
-                      style={{ fontSize: '12px', padding: '6px 12px' }}
-                    >
-                      상세보기
-                    </button>
-                  </div>
+        <div className="stock-grid">
+          {selectedStocks.map((stock) => (
+            <article key={stock.stockId} className="stock-card">
+              <div className="stock-head">
+                <div>
+                  <strong>{stock.name}</strong>
+                  <span>{stock.code}</span>
                 </div>
-              ))}
-            </div>
-
-            {results.formatted && (
-              <div className="section" style={{ marginTop: '40px' }}>
-                <h3 style={{ marginBottom: '15px' }}>📊 일일 분석 리포트</h3>
-                <div className="card">
-                  <pre
-                    style={{
-                      whiteSpace: 'pre-wrap',
-                      wordWrap: 'break-word',
-                      fontSize: '12px',
-                      color: '#6b7280'
-                    }}
+                <div className="stock-signal">
+                  <span>{selectedTheme?.label}</span>
+                  <strong>{stock.signal ? `${stock.signal.threeDayReturn.toFixed(1)}%` : '-'}</strong>
+                </div>
+              </div>
+              <p className="stock-rationale">{stock.rationale}</p>
+              <div className="mini-stats">
+                <span>3일 수익률 {stock.signal?.threeDayReturn.toFixed(1) ?? '-'}%</span>
+                <span>거래대금 변화 {stock.signal?.volumeChange.toFixed(1) ?? '-'}%</span>
+                <span>변동성 {stock.signal?.volatility.toFixed(1) ?? '-'}%</span>
+              </div>
+              <div className="stock-timeline">
+                {stock.relatedNews.slice(0, 5).map((article, index, list) => (
+                  <a
+                    key={`${stock.stockId}-${article.id}`}
+                    href={article.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="stock-timeline-item"
                   >
-                    {results.formatted}
-                  </pre>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 상세 분석 */}
-        {activeTab === 'detailed' && detailedAnalysis && (
-          <div className="section">
-            <h2>🔍 {detailedAnalysis.sector} - 상세 분석</h2>
-
-            {/* 기사 요약 */}
-            {detailedAnalysis.articles && detailedAnalysis.articles.length > 0 && (
-              <div style={{ marginBottom: '40px' }}>
-                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
-                  📰 관련 기사 ({detailedAnalysis.articles.length}개)
-                </h3>
-                <div className="table-wrapper">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>제목</th>
-                        <th>요약</th>
-                        <th>관련도</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detailedAnalysis.articles.map((article: any, idx: number) => (
-                        <tr key={idx}>
-                          <td>{article.title || '제목 없음'}</td>
-                          <td>{article.summary || '요약 없음'}</td>
-                          <td>{article.relevanceScore || 0}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* 기사 관계성 */}
-            {detailedAnalysis.articleRelationship && (
-              <div style={{ marginBottom: '40px' }}>
-                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
-                  🔗 기사 관계성 분석
-                </h3>
-                <div className="card">
-                  <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
-                    {detailedAnalysis.articleRelationship}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 역사 추적 */}
-            {detailedAnalysis.historicalTrend && (
-              <div style={{ marginBottom: '40px' }}>
-                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
-                  📅 최근 3개월 역사
-                </h3>
-                <div className="card">
-                  <p style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.6' }}>
-                    {detailedAnalysis.historicalTrend.period || ''}
-                  </p>
-                  {detailedAnalysis.historicalTrend.keyEvents && (
-                    <ul style={{ fontSize: '13px', color: '#6b7280', marginTop: '10px' }}>
-                      {detailedAnalysis.historicalTrend.keyEvents.map((event: string, idx: number) => (
-                        <li key={idx}>- {event}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '10px', fontWeight: 600 }}>
-                    결론: {detailedAnalysis.historicalTrend.conclusion || ''}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* 지정학적 분석 */}
-            {detailedAnalysis.geopolitical && (
-              <div style={{ marginBottom: '40px' }}>
-                <h3 style={{ marginBottom: '15px', fontSize: '16px', fontWeight: 600 }}>
-                  🌐 국제 정세 & 매크로 경제 분석
-                </h3>
-
-                {/* 국제 정세 이슈 */}
-                {detailedAnalysis.geopolitical.internationalIssues && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px' }}>
-                      🔴 국제 정세 이슈
-                    </h4>
-                    <ul style={{ fontSize: '13px', color: '#6b7280' }}>
-                      {detailedAnalysis.geopolitical.internationalIssues.map((issue: string, idx: number) => (
-                        <li key={idx}>- {issue}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 매크로 경제 요인 */}
-                {detailedAnalysis.geopolitical.macroeconomicFactors && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px' }}>
-                      📊 매크로 경제 요인
-                    </h4>
-                    <ul style={{ fontSize: '13px', color: '#6b7280' }}>
-                      {detailedAnalysis.geopolitical.macroeconomicFactors.map((factor: string, idx: number) => (
-                        <li key={idx}>- {factor}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 주요국 움직임 */}
-                {detailedAnalysis.geopolitical.countryMovements && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 500, marginBottom: '10px' }}>
-                      🌍 주요국 움직임
-                    </h4>
-                    <div className="grid grid-2" style={{ gap: '10px' }}>
-                      <div className="card" style={{ padding: '10px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇺🇸 미국</p>
-                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
-                          {detailedAnalysis.geopolitical.countryMovements.usa || ''}
-                        </p>
-                      </div>
-                      <div className="card" style={{ padding: '10px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇰🇷 한국</p>
-                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
-                          {detailedAnalysis.geopolitical.countryMovements.korea || ''}
-                        </p>
-                      </div>
-                      <div className="card" style={{ padding: '10px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇨🇳 중국</p>
-                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
-                          {detailedAnalysis.geopolitical.countryMovements.china || ''}
-                        </p>
-                      </div>
-                      <div className="card" style={{ padding: '10px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '5px' }}>🇪🇺 유럽</p>
-                        <p style={{ fontSize: '12px', color: '#6b7280' }}>
-                          {detailedAnalysis.geopolitical.countryMovements.europe || ''}
-                        </p>
-                      </div>
+                    <div className="stock-timeline-left">
+                      <span className={`timeline-dot ${article.alert ? 'alert' : ''}`} />
+                      {index !== list.length - 1 && <span className="timeline-line" />}
                     </div>
-                  </div>
-                )}
-
-                {/* 종합 분석 */}
-                {detailedAnalysis.geopolitical.synthesis && (
-                  <div style={{ marginBottom: '20px', backgroundColor: '#f3f4f6', padding: '15px', borderRadius: '8px' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '10px' }}>
-                      💡 종합 분석
-                    </h4>
-                    <p style={{ fontSize: '13px', color: '#1f2937', lineHeight: '1.6' }}>
-                      {detailedAnalysis.geopolitical.synthesis}
-                    </p>
-                  </div>
-                )}
+                    <div className="linked-news">
+                      <div className="linked-news-top">
+                        <span>{formatTime(article.publishedAt)}</span>
+                        <span>{article.source}</span>
+                      </div>
+                      <strong>{article.title}</strong>
+                      <p>{article.shortSummary}</p>
+                    </div>
+                  </a>
+                ))}
               </div>
-            )}
-          </div>
-        )}
-      </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

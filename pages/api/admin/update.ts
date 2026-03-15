@@ -9,22 +9,32 @@ interface ResponseData {
 }
 
 function isAuthorized(req: NextApiRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  // 로컬 개발(CRON_SECRET 없음) → 인증 우회
-  if (!secret) return true;
+  const token = process.env.ADMIN_TOKEN;
+  if (!token) {
+    return false;
+  }
+
   const auth = req.headers.authorization;
-  return auth === `Bearer ${secret}`;
+  return auth === `Bearer ${token}`;
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResponseData>
 ) {
-  if (req.method !== 'POST' && req.method !== 'GET') {
+  if (req.method !== 'POST') {
     return res.status(405).json({
       success: false,
       timestamp: new Date().toISOString(),
       error: 'Method not allowed'
+    });
+  }
+
+  if (!process.env.ADMIN_TOKEN) {
+    return res.status(500).json({
+      success: false,
+      timestamp: new Date().toISOString(),
+      error: 'Server misconfiguration: ADMIN_TOKEN required'
     });
   }
 
@@ -37,14 +47,14 @@ export default async function handler(
   }
 
   try {
-    const payload = await runDailySnapshot('cron');
+    const payload = await runDailySnapshot('admin');
     return res.status(200).json({
       success: true,
       timestamp: payload.timestamp,
       snapshot: payload
     });
   } catch (error) {
-    console.error('[UPDATE ERROR]', error);
+    console.error('[ADMIN UPDATE ERROR]', error);
     return res.status(500).json({
       success: false,
       timestamp: new Date().toISOString(),

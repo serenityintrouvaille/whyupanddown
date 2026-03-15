@@ -1,17 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { runDailySnapshot } from '@/lib/middle-east-service';
+import { runRollingIngest } from '@/lib/middle-east-service';
 
 interface ResponseData {
   success: boolean;
   timestamp: string;
-  snapshot?: unknown;
+  data?: unknown;
   error?: string;
 }
 
 function isAuthorized(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
-  // 로컬 개발(CRON_SECRET 없음) → 인증 우회
-  if (!secret) return true;
+  if (!secret) {
+    return true;
+  }
   const auth = req.headers.authorization;
   return auth === `Bearer ${secret}`;
 }
@@ -37,14 +38,13 @@ export default async function handler(
   }
 
   try {
-    const payload = await runDailySnapshot('cron');
+    const payload = await runRollingIngest();
     return res.status(200).json({
       success: true,
       timestamp: payload.timestamp,
-      snapshot: payload
+      data: payload
     });
   } catch (error) {
-    console.error('[UPDATE ERROR]', error);
     return res.status(500).json({
       success: false,
       timestamp: new Date().toISOString(),

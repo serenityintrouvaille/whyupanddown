@@ -1,49 +1,38 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
-import path from 'path';
+import { buildSignalBoard } from '@/lib/middle-east-board';
+import { getRolling, getSnapshot } from '@/lib/middle-east-storage';
+import type { DailySnapshotPayload, RollingIngestPayload, SignalBoard } from '@/lib/middle-east-types';
 
 interface ResultsResponse {
   success: boolean;
-  data?: any;
+  data?: {
+    snapshot: DailySnapshotPayload | null;
+    rolling: RollingIngestPayload | null;
+    board: SignalBoard | null;
+  };
   error?: string;
 }
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<ResultsResponse>
 ) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
+
   try {
-    const dataDir = path.join(process.cwd(), 'data');
-
-    if (!fs.existsSync(dataDir)) {
-      return res.status(200).json({
-        success: true,
-        data: { message: 'No results yet' }
-      });
-    }
-
-    // 가장 최신 결과 파일 찾기
-    const files = fs.readdirSync(dataDir)
-      .filter(f => f.startsWith('results-'))
-      .sort()
-      .reverse();
-
-    if (files.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: { message: 'No results yet' }
-      });
-    }
-
-    const latestFile = path.join(dataDir, files[0]);
-    const data = JSON.parse(fs.readFileSync(latestFile, 'utf-8'));
-
-    res.status(200).json({
+    const [snapshot, rolling] = await Promise.all([getSnapshot(), getRolling()]);
+    return res.status(200).json({
       success: true,
-      data: data
+      data: {
+        snapshot,
+        rolling,
+        board: buildSignalBoard(rolling || snapshot)
+      }
     });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
     });
