@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { runRollingIngest } from '@/lib/middle-east-service';
+import { isWorkflowAuthorized } from '@/lib/workflow-auth';
 
 interface ResponseData {
   success: boolean;
@@ -9,12 +10,10 @@ interface ResponseData {
 }
 
 function isAuthorized(req: NextApiRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    return true;
-  }
-  const auth = req.headers.authorization;
-  return auth === `Bearer ${secret}`;
+  return isWorkflowAuthorized(
+    req.headers.authorization,
+    typeof req.headers['x-workflow-key'] === 'string' ? req.headers['x-workflow-key'] : undefined
+  );
 }
 
 export default async function handler(

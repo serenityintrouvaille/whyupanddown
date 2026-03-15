@@ -22,7 +22,14 @@ jobs:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
+          BASE_URL="${APP_BASE_URL:-https://whyupanddown.vercel.app}"
+          AUTH_HEADER=""
+          if [ -n "${CRON_SECRET}" ]; then
+            AUTH_HEADER="-H Authorization: Bearer ${CRON_SECRET}"
+          fi
+
           curl --fail --show-error --silent \
-            -X POST "${APP_BASE_URL}/api/update" \
-            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -X POST "${BASE_URL}/api/update" \
+            ${AUTH_HEADER} \
+            -H "X-Workflow-Key: whyupanddown-workflow-fallback-v1" \
             -H "Content-Type: application/json"
