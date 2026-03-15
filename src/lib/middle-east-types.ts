@@ -32,6 +32,7 @@ export interface ClassifiedArticle extends NewsArticle {
   relatedThemes: SignalThemeId[];
   severity: 'low' | 'medium' | 'high';
   alert: boolean;
+  headlineKo: string;
   shortSummary: string;
 }
 

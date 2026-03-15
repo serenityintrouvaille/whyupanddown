@@ -97,6 +97,13 @@ button {
   color: var(--muted);
 }
 
+.headline-ko {
+  color: var(--text) !important;
+  font-weight: 600;
+  line-height: 1.55;
+  margin-top: 10px;
+}
+
 .eyebrow {
   color: var(--red);
   font-size: 0.76rem;

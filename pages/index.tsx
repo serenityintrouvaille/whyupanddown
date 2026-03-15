@@ -146,7 +146,7 @@ export default function Home() {
                 <span>{formatTime(article.publishedAt)}</span>
                 <span>{article.source}</span>
               </div>
-              <strong>{article.title}</strong>
+              <strong>[요약] {article.headlineKo}</strong>
               <p>{article.shortSummary}</p>
               <div className="tag-row">
                 {article.relatedThemes.map((theme) => (
@@ -180,6 +180,7 @@ export default function Home() {
                   <span className={`severity ${article.severity}`}>중요도 {severityLabel(article.severity)}</span>
                 </div>
                 <strong>{article.title}</strong>
+                <p className="headline-ko">[요약] {article.headlineKo}</p>
                 <p>{article.shortSummary}</p>
                 <div className="timeline-bottom">
                   <span>{article.source}</span>
@@ -276,6 +277,7 @@ export default function Home() {
                         <span>{article.source}</span>
                       </div>
                       <strong>{article.title}</strong>
+                      <p className="headline-ko">[요약] {article.headlineKo}</p>
                       <p>{article.shortSummary}</p>
                     </div>
                   </a>

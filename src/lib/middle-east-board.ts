@@ -161,6 +161,71 @@ function titleHas(text: string, keywords: string[]) {
   return includesAny(text, keywords);
 }
 
+function buildHeadlineKo(article: SourcePayload['articles'][number], categories: NewsCategory[]) {
+  const text = `${article.title} ${article.summary} ${article.topic}`.toLowerCase();
+
+  if (categories.includes('HORMUZ')) {
+    if (titleHas(text, ['open', 'reopen', 'secure', 'escort', 'protect'])) {
+      return '호르무즈 해협 통항 확보 움직임 부각';
+    }
+    if (titleHas(text, ['ship', 'vessel', 'tanker', 'terminal', 'cargo'])) {
+      return '호르무즈 인근 선박·물류 리스크 확대';
+    }
+    return '호르무즈 해협 리스크 재부각';
+  }
+
+  if (categories.includes('OIL')) {
+    if (titleHas(text, ['surge', 'soar', 'gain', 'rise', 'higher'])) {
+      return '중동 긴장에 국제유가 상승 압력 확대';
+    }
+    if (titleHas(text, ['drop', 'fall', 'decline', 'lower'])) {
+      return '국제유가 조정 가능성 부각';
+    }
+    return '원유 수급 변수와 유가 테마 점검';
+  }
+
+  if (categories.includes('US_STRIKE')) {
+    return '미국 직접 개입 가능성에 시장 긴장 고조';
+  }
+
+  if (categories.includes('WEAPON')) {
+    if (titleHas(text, ['drone'])) {
+      return '드론 전개와 요격 이슈 확산';
+    }
+    if (titleHas(text, ['missile', 'rocket', 'ballistic'])) {
+      return '미사일 공방 격화 소식 부각';
+    }
+    return '무기 활용 정보가 방산 테마 자극';
+  }
+
+  if (categories.includes('SEMICONDUCTOR')) {
+    return '반도체 공급망 변수 점검 필요';
+  }
+
+  if (categories.includes('TARIFF_SANCTION')) {
+    return '제재·관세 이슈가 공급망 변수로 확산';
+  }
+
+  if (categories.includes('IRAN_ISRAEL')) {
+    if (titleHas(text, ['strike', 'air strike', 'launches', 'attack'])) {
+      return '이란·이스라엘 공습 격화';
+    }
+    if (titleHas(text, ['ceasefire', 'dialogue', 'truce'])) {
+      return '휴전·대화 가능성 재점검';
+    }
+    return '이란·이스라엘 충돌 지속';
+  }
+
+  if (categories.includes('WAR')) {
+    if (titleHas(text, ['ceasefire', 'dialogue', 'truce'])) {
+      return '중동 휴전 협상 가능성 주목';
+    }
+    return '중동 전황 변화가 시장 변수로 부각';
+  }
+
+  return '중동 지정학 뉴스 요약';
+}
+
 function buildSummary(article: SourcePayload['articles'][number], categories: NewsCategory[]) {
   const title = article.title.toLowerCase();
   const text = `${article.title} ${article.summary} ${article.topic}`.toLowerCase();
@@ -270,6 +335,7 @@ function classifyArticle(article: SourcePayload['articles'][number]): Classified
     relatedThemes: [...matchedThemes],
     severity,
     alert,
+    headlineKo: buildHeadlineKo(article, categories),
     shortSummary: buildSummary(article, categories)
   };
 }
